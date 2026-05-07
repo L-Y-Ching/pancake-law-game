@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>麥當勞鬆餅挑戰 - 無限疊高版</title>
+    <style>
+        body { margin: 0; background-color: #f7f7f7; font-family: "Microsoft JhengHei", sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        #game-area { position: relative; width: 450px; height: 650px; background: #fdfcf0; border: 10px solid #db231b; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        canvas { display: block; }
+        
+        #ui-layer { position: absolute; top: 15px; right: 15px; background: rgba(255, 255, 255, 0.9); padding: 10px 15px; border-radius: 8px; border: 2px solid #ffbc0d; text-align: right; font-weight: bold; z-index: 10; }
+        #score-label { color: #db231b; font-size: 16px; }
+        #score-val { font-size: 28px; }
+
+        #question-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: none; flex-direction: column;
+            justify-content: center; align-items: center; color: white; padding: 30px; 
+            box-sizing: border-box; text-align: center; z-index: 20;
+        }
+        #q-feedback { font-size: 24px; font-weight: bold; margin-top: 15px; height: 30px; }
+        .btn { background: #ffbc0d; border: none; color: #333; padding: 12px 20px; margin: 8px 0; cursor: pointer; border-radius: 25px; font-size: 16px; width: 100%; font-weight: bold; }
+
+        #giant-hand { position: absolute; top: -250px; left: 75px; font-size: 150px; transition: top 0.4s ease-in; pointer-events: none; z-index: 15; }
+        
+        #gameover-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(219, 35, 27, 0.95); display: none; flex-direction: column;
+            justify-content: center; align-items: center; color: white; z-index: 30;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-area">
+    <canvas id="gameCanvas" width="450" height="650"></canvas>
+    <div id="ui-layer">
+        <div id="score-label">SCORE</div>
+        <div id="score-val">0</div>
+        <div style="color:#555">❤️ <span id="lives-val">3</span></div>
+    </div>
+    
+    <div id="question-overlay">
+        <h2 style="color:#ffbc0d">🍔 法律挑戰 🍔</h2>
+        <p id="q-text" style="font-size:18px; line-height:1.6;"></p>
+        <div id="q-options" style="width: 100%;"></div>
+        <div id="q-feedback"></div>
+    </div>
+    
+    <div id="gameover-overlay">
+        <h1>遊戲結束</h1>
+        <p id="death-reason">重心不穩！</p>
+        <p style="font-size: 32px; font-weight: bold;">總分：<span id="final-score">0</span></p>
+        <button class="btn" style="width: auto; padding: 10px 30px;" onclick="location.reload()">再試一次</button>
+    </div>
+
+    <div id="giant-hand">🖐️</div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const uiScore = document.getElementById('score-val');
+    const uiLives = document.getElementById('lives-val');
+    const qOverlay = document.getElementById('question-overlay');
+    const qFeedback = document.getElementById('q-feedback');
+    const giantHand = document.getElementById('giant-hand');
+
+    let score = 0;
+    let pancakesStacked = 0;
+    let lives = 3;
+    let isGameOver = false;
+    let isPaused = false;
+    let gameState = 'MOVING'; 
+
+    const PANCAKE_W = 160;
+    const PANCAKE_H = 22;
+    const TARGET_STACK_Y = 450; // 鬆餅塔頂端希望維持的高度
+
+    let stack = [{ x: 145, y: 580, w: PANCAKE_W }]; 
+    let currentPancake = { x: 0, y: 80, w: PANCAKE_W, speed: 4, angle: 0, fallSide: 0 };
+    let cameraY = 0; // 用於控制捲軸位移
+
+    const questions = [
+        { q: "行政機關行使權力應受法律拘束，且不得與法律抵觸，稱為？", a: ["依法行政原則", "信賴保護原則", "比例原則", "誠實信用原則"], correct: 0 },
+	{ q: "下列何者為憲法的概括基本權利？", a: ["宗教自由", "言論自由", "婚姻自由", "人身自由"], correct: 2 },
+	{ q: "「法律若無明文規定，行政機關即不得採取行動」這是指哪項原則？", a: ["法律保留原則", "比例原則", "誠實信用原則", "平等原則"], correct: 0 },
+        { q: "憲法中規定限制人民權利時，手段與目的需具備合理關聯，此為？", a: ["比例原則", "法律保留原則", "明確性原則", "平等原則"], correct: 0 },
+        { q: "政府公告之法規若無正當理由不得隨意更改而損及人民利益，是哪項原則？", a: ["信賴保護原則", "不當聯結禁止原則", "權力分立原則", "法律明確性原則"], correct: 0 },
+        { q: "立法院通過，總統公布之法律，其效力優於行政機關之命令，稱為？", a: ["法律優位原則", "法律保留原則", "罪刑法定原則", "權力制衡原則"], correct: 0 },
+        { q: "行政行為之內容應明確，使人民得以預見，此為？", a: ["法律明確性原則", "平等原則", "必要性原則", "衡量性原則"], correct: 0 }
+    ];
+
+    function draw() {
+        if (isGameOver) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 更新捲軸：讓 cameraY 慢慢追隨 stack 頂端
+        let topY = stack[stack.length - 1].y;
+        let desiredCameraY = TARGET_STACK_Y - topY;
+        cameraY += (desiredCameraY - cameraY) * 0.1; // 緩動效果
+
+        ctx.save();
+        ctx.translate(0, cameraY); // 套用捲軸位移
+
+        // 畫底盤
+        ctx.fillStyle = '#ddd';
+        ctx.beginPath(); ctx.ellipse(225, 602, 150, 20, 0, 0, Math.PI * 2); ctx.fill();
+
+        // 畫疊好的鬆餅
+        stack.forEach(p => drawPancake(p.x, p.y, p.w, 0));
+
+        if (!isPaused) {
+            if (gameState === 'MOVING') {
+                currentPancake.x += currentPancake.speed;
+                if (currentPancake.x + currentPancake.w > canvas.width || currentPancake.x < 0) currentPancake.speed *= -1;
+            } else if (gameState === 'DROPPING') {
+                currentPancake.y += 12;
+                let last = stack[stack.length - 1];
+                if (currentPancake.y >= last.y - PANCAKE_H) {
+                    currentPancake.y = last.y - PANCAKE_H;
+                    checkPhysics();
+                }
+            } else if (gameState === 'TOPPLING') {
+                currentPancake.y += 10;
+                currentPancake.x += currentPancake.fallSide * 5;
+                currentPancake.angle += currentPancake.fallSide * 0.1;
+                // 如果掉出視野下方則遊戲結束
+                if (currentPancake.y + cameraY > canvas.height) gameOver("鬆餅重心不穩掉下去了！");
+            }
+            
+            if (gameState !== 'IDLE') {
+                drawPancake(currentPancake.x, currentPancake.y, currentPancake.w, currentPancake.angle);
+            }
+        }
+        ctx.restore();
+        
+        requestAnimationFrame(draw);
+    }
+
+    function drawPancake(x, y, w, angle) {
+        ctx.save();
+        ctx.translate(x + w/2, y + PANCAKE_H/2);
+        ctx.rotate(angle);
+        ctx.fillStyle = '#f1b434';
+        ctx.strokeStyle = '#d38c1a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-w/2, -PANCAKE_H/2, w, PANCAKE_H, 11);
+        ctx.fill();
+        ctx.stroke();
+        // 點綴反光
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(-w/2 + 10, -PANCAKE_H/2 + 4, w - 20, 4);
+        ctx.restore();
+    }
+
+    function checkPhysics() {
+        let last = stack[stack.length - 1];
+        let center = currentPancake.x + (PANCAKE_W / 2);
+
+        if (center >= last.x && center <= last.x + last.w) {
+            stack.push({ x: currentPancake.x, y: currentPancake.y, w: PANCAKE_W });
+            score += 10;
+            pancakesStacked++;
+            uiScore.innerText = score;
+            
+            // 讓新的鬆餅永遠從「當前視窗」的上方出現
+            // 計算目前畫面上緣在世界座標系的位置： -cameraY
+            currentPancake = { 
+                x: Math.random()*(canvas.width-PANCAKE_W), 
+                y: -cameraY + 80, 
+                w: PANCAKE_W, 
+                speed: (Math.random()>0.5?1:-1)*(4 + Math.min(score/50, 6)), // 隨難度增加速度
+                angle: 0,
+                fallSide: 0
+            };
+            gameState = 'MOVING';
+
+            if (pancakesStacked % 5 === 0) triggerQuestion();
+        } else {
+            gameState = 'TOPPLING';
+            currentPancake.fallSide = (center < last.x) ? -1 : 1;
+        }
+    }
+
+    function triggerQuestion() {
+        isPaused = true;
+        qFeedback.innerText = "";
+        const q = questions[Math.floor(Math.random() * questions.length)];
+        document.getElementById('q-text').innerText = q.q;
+        const optsArea = document.getElementById('q-options');
+        optsArea.innerHTML = '';
+        
+        q.a.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn';
+            btn.innerText = opt;
+            btn.onclick = () => {
+                if (index === q.correct) {
+                    qFeedback.style.color = "#4CAF50";
+                    qFeedback.innerText = "✅ 正確！即將繼續...";
+                    setTimeout(() => {
+                        isPaused = false;
+                        qOverlay.style.display = 'none';
+                    }, 800);
+                } else {
+                    smashByGiant();
+                }
+            };
+            optsArea.appendChild(btn);
+        });
+        qOverlay.style.display = 'flex';
+    }
+
+    function smashByGiant() {
+        qFeedback.style.color = "#FF5252";
+        qFeedback.innerText = "❌ 答錯了！巨人來了！";
+        setTimeout(() => {
+            qOverlay.style.display = 'none';
+            giantHand.style.top = '100px';
+            setTimeout(() => {
+                lives--;
+                uiLives.innerText = lives;
+                giantHand.style.top = '-250px';
+                if (lives <= 0) gameOver("被巨人拍掉 3 次了！");
+                else {
+                    isPaused = false;
+                    gameState = 'MOVING';
+                    // 重置在當前視野上方
+                    currentPancake.y = -cameraY + 80;
+                }
+            }, 600);
+        }, 800);
+    }
+
+    function gameOver(reason) {
+        isGameOver = true;
+        document.getElementById('death-reason').innerText = reason;
+        document.getElementById('final-score').innerText = score;
+        document.getElementById('gameover-overlay').style.display = 'flex';
+    }
+
+    const handleAction = () => { if(gameState === 'MOVING' && !isPaused) gameState = 'DROPPING'; };
+    window.addEventListener('keydown', (e) => { if(e.code === 'Space') handleAction(); });
+    canvas.addEventListener('mousedown', handleAction);
+
+    draw();
+</script>
+
+</body>
+</html>
