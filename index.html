@@ -281,6 +281,35 @@
     canvas.addEventListener('mousedown', handleAction);
 
     draw();
+	function resizeGame() {
+        const gameArea = document.getElementById('game-area');
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        // 取得縮放比例（取寬度或高度較小的那個，預留一點邊距）
+        const scale = Math.min(
+            windowWidth / 480, // 450px 寬度 + 邊框
+            windowHeight / 680 // 650px 高度 + 邊框
+        );
+        
+        // 如果螢幕太小才縮放，螢幕夠大就保持原樣
+        if (scale < 1) {
+            gameArea.style.transform = `scale(${scale})`;
+        } else {
+            gameArea.style.transform = `scale(1)`;
+        }
+    }
+
+    // 監聽視窗變化與載入完成
+    window.addEventListener('resize', resizeGame);
+    window.addEventListener('load', resizeGame);
+    resizeGame(); // 初始化執行
+
+    // 針對手機端增加觸控監聽
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // 防止點擊縮放
+        handleAction();
+    }, { passive: false });
 </script>
 
 </body>
