@@ -1,33 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
     <title>鬆餅挑戰 - 法律版</title>
     <style>
-        body { 
-            margin: 0; 
-            background-color: #f7f7f7; 
-            font-family: "Microsoft JhengHei", sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            width: 100vw;
-            overflow: hidden; 
-            touch-action: none; /* 防止手機瀏覽器預設的縮放與滑動 */
-        }
-        #game-area { 
-            position: relative; 
-            width: 450px; 
-            height: 650px; 
-            background: #fdfcf0; 
-            border: 10px solid #db231b; 
-            border-radius: 15px; 
-            overflow: hidden; 
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2); 
-            /* 預設中心點 */
-            transform-origin: center center;
-        }
+        body { margin: 0; background-color: #f7f7f7; font-family: "Microsoft JhengHei", sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        #game-area { position: relative; width: 450px; height: 650px; background: #fdfcf0; border: 10px solid #db231b; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
         canvas { display: block; }
         
         #ui-layer { position: absolute; top: 15px; right: 15px; background: rgba(255, 255, 255, 0.9); padding: 10px 15px; border-radius: 8px; border: 2px solid #ffbc0d; text-align: right; font-weight: bold; z-index: 10; }
@@ -281,38 +259,6 @@
     canvas.addEventListener('mousedown', handleAction);
 
     draw();
-	function resizeGame() {
-      function resizeGame() {
-        const gameArea = document.getElementById('game-area');
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-        
-        // 遊戲原始設計尺寸（含邊框）
-        const baseWidth = 470; 
-        const baseHeight = 670;
-        
-        // 計算寬度比例與高度比例
-        const widthScale = windowWidth / baseWidth;
-        const heightScale = windowHeight / baseHeight;
-        
-        // 取兩者中較小的比例，確保完整內容都能塞進螢幕
-        // 乘上 0.95 是為了留一點點邊際空隙，不要貼死邊緣
-        let finalScale = Math.min(widthScale, heightScale) * 0.95;
-        
-        // 執行縮放
-        gameArea.style.transform = `scale(${finalScale})`;
-        
-        // 如果縮放後想要垂直置中，可以加上這行
-        gameArea.style.position = 'absolute';
-    }
-
-    // 監聽視窗變化
-    window.addEventListener('resize', resizeGame);
-    window.addEventListener('orientationchange', resizeGame); // 處理轉向
-    window.addEventListener('load', resizeGame);
-    
-    // 立即執行一次
-    setTimeout(resizeGame, 100);
 </script>
 
 </body>
