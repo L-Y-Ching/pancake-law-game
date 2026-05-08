@@ -282,34 +282,37 @@
 
     draw();
 	function resizeGame() {
+      function resizeGame() {
         const gameArea = document.getElementById('game-area');
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
         
-        // 取得縮放比例（取寬度或高度較小的那個，預留一點邊距）
-        const scale = Math.min(
-            windowWidth / 480, // 450px 寬度 + 邊框
-            windowHeight / 680 // 650px 高度 + 邊框
-        );
+        // 遊戲原始設計尺寸（含邊框）
+        const baseWidth = 470; 
+        const baseHeight = 670;
         
-        // 如果螢幕太小才縮放，螢幕夠大就保持原樣
-        if (scale < 1) {
-            gameArea.style.transform = `scale(${scale})`;
-        } else {
-            gameArea.style.transform = `scale(1)`;
-        }
+        // 計算寬度比例與高度比例
+        const widthScale = windowWidth / baseWidth;
+        const heightScale = windowHeight / baseHeight;
+        
+        // 取兩者中較小的比例，確保完整內容都能塞進螢幕
+        // 乘上 0.95 是為了留一點點邊際空隙，不要貼死邊緣
+        let finalScale = Math.min(widthScale, heightScale) * 0.95;
+        
+        // 執行縮放
+        gameArea.style.transform = `scale(${finalScale})`;
+        
+        // 如果縮放後想要垂直置中，可以加上這行
+        gameArea.style.position = 'absolute';
     }
 
-    // 監聽視窗變化與載入完成
+    // 監聽視窗變化
     window.addEventListener('resize', resizeGame);
+    window.addEventListener('orientationchange', resizeGame); // 處理轉向
     window.addEventListener('load', resizeGame);
-    resizeGame(); // 初始化執行
-
-    // 針對手機端增加觸控監聽
-    canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault(); // 防止點擊縮放
-        handleAction();
-    }, { passive: false });
+    
+    // 立即執行一次
+    setTimeout(resizeGame, 100);
 </script>
 
 </body>
