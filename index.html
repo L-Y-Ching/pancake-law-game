@@ -4,8 +4,30 @@
     <meta charset="UTF-8">
     <title>鬆餅挑戰 - 法律版</title>
     <style>
-        body { margin: 0; background-color: #f7f7f7; font-family: "Microsoft JhengHei", sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        #game-area { position: relative; width: 450px; height: 650px; background: #fdfcf0; border: 10px solid #db231b; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        body { 
+            margin: 0; 
+            background-color: #f7f7f7; 
+            font-family: "Microsoft JhengHei", sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            width: 100vw;
+            overflow: hidden; 
+            touch-action: none; /* 防止手機瀏覽器預設的縮放與滑動 */
+        }
+        #game-area { 
+            position: relative; 
+            width: 450px; 
+            height: 650px; 
+            background: #fdfcf0; 
+            border: 10px solid #db231b; 
+            border-radius: 15px; 
+            overflow: hidden; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2); 
+            /* 預設中心點 */
+            transform-origin: center center;
+        }
         canvas { display: block; }
         
         #ui-layer { position: absolute; top: 15px; right: 15px; background: rgba(255, 255, 255, 0.9); padding: 10px 15px; border-radius: 8px; border: 2px solid #ffbc0d; text-align: right; font-weight: bold; z-index: 10; }
